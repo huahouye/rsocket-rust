@@ -24,9 +24,13 @@ pub trait Connection {
 
 #[async_trait]
 pub trait Transport {
-    type Conn: Connection + Send;
+    type Conn: Connection + Send + Sync;
 
     async fn connect(self) -> Result<Self::Conn>;
+
+    fn get_connection<'a>(&'a self) -> Result<&'a Self::Conn> {
+        Err(anyhow!("UNIMPLEMENT"))
+    }
 }
 
 #[async_trait]

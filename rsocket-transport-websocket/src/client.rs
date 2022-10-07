@@ -19,11 +19,15 @@ pub(crate) enum Connector {
 #[derive(Debug)]
 pub struct WebsocketClientTransport {
     connector: Connector,
+    websocket_connection: Option<WebsocketConnection>,
 }
 
 impl WebsocketClientTransport {
     pub(crate) fn new(connector: Connector) -> WebsocketClientTransport {
-        WebsocketClientTransport { connector }
+        WebsocketClientTransport {
+            connector,
+            websocket_connection: None,
+        }
     }
 }
 
@@ -31,20 +35,39 @@ impl WebsocketClientTransport {
 impl Transport for WebsocketClientTransport {
     type Conn = WebsocketConnection;
 
-    async fn connect(self) -> Result<WebsocketConnection> {
+    async fn connect(mut self) -> Result<WebsocketConnection> {
         match self.connector {
             Connector::Direct(stream) => match accept_async(stream).await {
-                Ok(ws) => Ok(WebsocketConnection::new(ws)),
+                Ok(ws) => {
+                    self.websocket_connection = Some(WebsocketConnection::new(ws));
+                    Ok(self.websocket_connection.unwrap())
+                }
                 Err(e) => Err(RSocketError::Other(e.into()).into()),
             },
             Connector::Url(u) => match connect_async(u).await {
-                Ok((stream, _)) => Ok(WebsocketConnection::new(stream)),
+                Ok((stream, _)) => {
+                    self.websocket_connection = Some(WebsocketConnection::new(stream));
+                    Ok(self.websocket_connection.unwrap())
+                }
                 Err(e) => Err(RSocketError::Other(e.into()).into()),
             },
             Connector::Request(req) => match connect_async(req).await {
-                Ok((stream, _)) => Ok(WebsocketConnection::new(stream)),
+                Ok((stream, _)) => {
+                    self.websocket_connection = Some(WebsocketConnection::new(stream));
+                    Ok(self.websocket_connection.unwrap())
+                }
                 Err(e) => Err(RSocketError::Other(e.into()).into()),
             },
+        }
+    }
+
+    fn get_connection(&self) -> Result<&WebsocketConnection> {
+        match &self.websocket_connection {
+            Some(wc) => Ok(wc),
+            None => Err(RSocketError::WithDescription(
+                "get connection err, connection is None".into(),
+            )
+            .into()),
         }
     }
 }
