@@ -63,4 +63,8 @@ pub trait RSocket: Sync + Send {
     fn request_stream(&self, req: Payload) -> Flux<Result<Payload>>;
     /// Request-Channel interaction model of RSocket.
     fn request_channel(&self, reqs: Flux<Result<Payload>>) -> Flux<Result<Payload>>;
+    /// Cancel or dispose the underlying task or resource.
+    fn close(&self) -> Result<()> {
+        Err(anyhow!("UNIMPLEMENT"))
+    }
 }
